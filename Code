@@ -1,0 +1,106 @@
+
+
+rm(list = ls())    
+
+############################################################################
+
+##################################################################
+##                       General settings                       ##
+##################################################################
+
+
+
+
+##load libraries
+library(tidyverse)
+library(lubridate)
+library(reshape2)
+library(readr)
+############################################################################
+############################################################################
+###                                                                      ###
+###                             READ IN DATA                             ###
+###                                                                      ###
+############################################################################
+############################################################################
+
+activity_labels <- read.table("activity_labels.txt")
+
+features <- read.table("features.txt")
+                        
+
+subject_test <- read.table("test/subject_test.txt")
+
+X_test <- read.table("test/X_test.txt")
+
+y_test <- read.table("test/y_test.txt")
+
+subject_train <- read.table("train/subject_train.txt")
+
+X_train <- read.table("train/X_train.txt")
+
+y_train <- read.table("train/y_train.txt")
+
+############################################################################
+############################################################################
+###                                                                      ###
+###                             PREPARE DATA                             ###
+###                                                                      ###
+############################################################################
+############################################################################
+
+##################################################################
+##        Use only features we would like from train & test     ##
+##################################################################
+activity_labels[,2] <- as.character(activity_labels[,2])
+features[,2] <- as.character(features[,2])
+
+features_ <- grep(".*mean.*|.*std.*", features[,2])
+features_.names <- features[features_,2]
+features_.names = gsub("-mean", "Mean", features_.names)
+features_.names = gsub("-std", "Std", features_.names)
+features_.names <- gsub("[-()]", "",features_.names)
+
+X_train <- X_train[features_]
+X_test <- X_test[features_]
+
+
+##################################################################
+##                         Merge the data                       ##
+##################################################################
+
+##---------------------------------------------------------------
+##                  Bring test and train togehter               -
+##---------------------------------------------------------------
+
+train <- cbind(subject_train, y_train, X_train)
+test <- cbind(subject_test, y_test, X_test)
+
+##---------------------------------------------------------------
+##                       All Data together                      -
+##---------------------------------------------------------------
+
+df <- rbind(train, test)
+colnames(df) <- c("subject", "activity", features_.names)
+
+##################################################################
+##     turn activities & subjects into factors                  ##
+##################################################################
+
+
+df$activity <- factor(df$activity, levels = activity_labels[,1], labels = activity_labels[,2])
+df$subject <- as.factor(df$subject)
+
+##---------------------------------------------------------------
+##                         Melt                                 -
+##---------------------------------------------------------------
+
+df.melted <- melt(df, id = c("subject", "activity"))
+df.mean <- dcast(df.melted, subject + activity ~ variable, mean)
+
+##---------------------------------------------------------------
+##                         Write                                -
+##---------------------------------------------------------------
+
+write.table(df.mean, "tidy.txt", row.names = FALSE, quote = FALSE)
+
